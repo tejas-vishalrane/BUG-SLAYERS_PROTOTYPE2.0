@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoolCity: Urban Heat Mapping Platform</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #ff2929;
+            background-color: #17d1ff;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            background: linear-gradient(145deg, #34495e, #2c3e50);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        .logo span {
+            color: #1abc9c;
+        }
+        nav {
+            display: flex;
+            gap: 20px;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            background: linear-gradient(145deg, #1abc9c, #16a085);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        nav a:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+        }
+        .main-content {
+            display: flex;
+            flex: 1;
+        }
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            padding: 1.5rem;
+            overflow-y: auto;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        .sidebar h3 {
+            margin-top: 0;
+            border-bottom: 2px solid #1abc9c;
+            padding-bottom: 0.5rem;
+            color: #34495e;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .layer-toggle {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .layer-toggle input {
+            margin-right: 10px;
+        }
+        .layer-toggle label {
+            font-size: 1rem;
+            color: #34495e;
+        }
+        .map-container {
+            flex: 1;
+            background: linear-gradient(145deg, #dfe6e9, #ecf0f1);
+            position: relative;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .map-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+            width: 320px;
+        }
+        .map-overlay h3 {
+            margin-top: 0;
+            color: #34495e;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .temperature-gradient {
+            height: 20px;
+            background: linear-gradient(to right, #3498db, #f1c40f, #e74c3c);
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .temp-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        button {
+            background: linear-gradient(145deg, #1abc9c, #16a085);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+        }
+        .data-panel {
+            padding: 1.5rem;
+            width: 320px;
+            background-color: white;
+            overflow-y: auto;
+            box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+        .data-card {
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+        .data-card h4 {
+            margin-top: 0;
+            color: #34495e;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .intervention-card {
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+            border-left: 5px solid #1abc9c;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+        .intervention-card h4 {
+            margin-top: 0;
+            color: #34495e;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .stat {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #f5f5f5;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">Cool<span>City</span></div>
+            <nav>
+                <a href="#">Dashboard</a>
+                <a href="#">Heat Maps</a>
+                <a href="#">Interventions</a>
+                <a href="#">Reports</a>
+                <a href="#">Settings</a>
+            </nav>
+            <div>
+                <button>Login</button>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <h3>Map Layers</h3>
+                <div class="layer-toggle">
+                    <input type="checkbox" id="temp" checked>
+                    <label for="temp">Temperature</label>
+                </div>
+                <div class="layer-toggle">
+                    <input type="checkbox" id="humidity">
+                    <label for="humidity">Humidity</label>
+                </div>
+                <div class="layer-toggle">
+                    <input type="checkbox" id="vegetation">
+                    <label for="vegetation">Vegetation</label>
+                </div>
+                <div class="layer-toggle">
+                    <input type="checkbox" id="albedo">
+                    <label for="albedo">Surface Albedo</label>
+                </div>
+                <div class="layer-toggle">
+                    <input type="checkbox" id="buildings">
+                    <label for="buildings">Building Heights</label>
+                </div>
+                <div class="layer-toggle">
+                    <input type="checkbox" id="sensors">
+                    <label for="sensors">Sensor Locations</label>
+                </div>
+                
+                <h3>Analysis Tools</h3>
+                <div class="layer-toggle">
+                    <input type="checkbox" id="hotspots" checked>
+                    <label for="hotspots">Heat Island Hotspots</label>
+                </div>
+                <div class="layer-toggle">
+                    <input type="checkbox" id="coolspots">
+                    <label for="coolspots">Cool Zones</label>
+                </div>
+                <div class="layer-toggle">
+                    <input type="checkbox" id="vulnerable">
+                    <label for="vulnerable">Vulnerable Populations</label>
+                </div>
+                
+                <h3>Time Range</h3>
+                <input type="range" min="0" max="100" value="100">
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #7f8c8d;">
+                    <span>Apr 10</span>
+                    <span>Apr 16, 2025</span>
+                </div>
+                
+                <h3>Time of Day</h3>
+                <select>
+                    <option>Current (2:30 PM)</option>
+                    <option>Morning (8:00 AM)</option>
+                    <option>Noon (12:00 PM)</option>
+                    <option>Evening (6:00 PM)</option>
+                    <option>Night (10:00 PM)</option>
+                </select>
+            </div>t>
+            
+            <div class="map-container">
+               
+                <div id="map" style="width: 100%; height: 100%;"></div>
+
+                <div class="map-overlay">
+                    <h3>Temperature Key</h3>
+                    <div class="temperature-gradient"></div>
+                    <div class="temp-labels">
+                        <span>70°F</span>
+                        <span>85°F</span>
+                        <span>100°F</span>
+                    </div>
+                    <p><small>Last updated: April 16, 2025 at 2:30 PM</small></p>
+                    <button>Show Live Sensor Data</button>
+                </div>
+            </div>
+            
+            <div class="data-panel">
+                <h3>Downtown District Analysis</h3>
+                <div class="data-card">
+                    <h4>Heat Island Intensity</h4>
+                    <p>This area is <span class="stat">7.3°F</span> warmer than the city average</p>
+                    <p>Primary factors:</p>
+                    <ul>
+                        <li>Dark surface materials (75% coverage)</li>
+                        <li>Tall building canyons with low SVF</li>
+                        <li>Minimal vegetation (8% cover)</li>
+                    </ul>
+                </div>
+                
+                <h3>Recommended Interventions</h3>
+                <div class="intervention-card">
+                    <h4>Strategic Tree Planting</h4>
+                    <p>Adding 120 trees along Main St and Commerce Ave could reduce surface temperatures by <span class="stat">4.2°F</span></p>
+                    <p>Cost estimate: $240,000</p>
+                    <p>CO₂ reduction: 4.8 tons/year</p>
+                    <button>View Detailed Plan</button>
+                </div>
+                
+                <div class="intervention-card">>
+                    <h4>Cool Rooftop Program</h4>
+                    <p>Converting 50% of dark rooftops (15 buildings) could reduce ambient temperature by <span class="stat">2.8°F</span></p>
+                    <p>Cost estimate: $380,000</p>
+                    <p>Energy savings: $42,000/year</p>
+                    <button>View Detailed Plan</button>
+                </div>
+                
+                <div class="intervention-card">
+                    <h4>Permeable Pavement</h4>
+                    <p>Replacing 3 parking lots could reduce surface temperatures by <span class="stat">5.1°F</span> and improve water management</p>
+                    <p>Cost estimate: $520,000</p>
+                    <p>Stormwater benefit: 75,000 gal/year</p>
+                    <button>View Detailed Plan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const map = L.map('map').setView([40.715, -74.005], 13); // NYC center
+      
+        // Base Layer
+        const baseMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+      
+        // Weather Layers (via your backend proxy)
+        const weatherLayers = {
+          Temperature: L.tileLayer('/api/weather/tile?layer=temp_new&z={z}&x={x}&y={y}', { opacity: 0.6 }),
+          Clouds: L.tileLayer('/api/weather/tile?layer=clouds_new&z={z}&x={x}&y={y}', { opacity: 0.5 }),
+          Wind: L.tileLayer('/api/weather/tile?layer=wind_new&z={z}&x={x}&y={y}', { opacity: 0.6 }),
+          Precipitation: L.tileLayer('/api/weather/tile?layer=precipitation_new&z={z}&x={x}&y={y}', { opacity: 0.6 }),
+          Pressure: L.tileLayer('/api/weather/tile?layer=pressure_new&z={z}&x={x}&y={y}', { opacity: 0.5 })
+        };
+      
+        // Add default layer
+        weatherLayers.Temperature.addTo(map);
+      
+        // Add Layer Controls
+        L.control.layers(null, weatherLayers, { collapsed: false }).addTo(map);
+      
+        // Add Sensor Markers
+        fetch('/api/sensors')
+          .then(res => res.json())
+          .then(data => {
+            data.forEach(sensor => {
+              L.circleMarker([sensor.lat, sensor.lon], {
+                radius: 8,
+                fillColor: '#e74c3c',
+                color: '#c0392b',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+              })
+              .bindPopup(`<b>Sensor #${sensor.id}</b><br>Temp: ${sensor.temp}°F`)
+              .addTo(map);
+            });
+          });
+      </script>
+      
+</body>
+</html>
+``` 
